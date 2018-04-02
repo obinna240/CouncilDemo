@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jee="http://www.springframework.org/schema/jee" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:mongo="http://www.springframework.org/schema/data/mongo"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.1.xsd   
+	http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd    
+	http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd    
+	http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-4.1.xsd 
+	http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.1.xsd  
+	http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.1.xsd  
+	http://www.springframework.org/schema/data/mongo http://www.springframework.org/schema/data/mongo/spring-mongo.xsd
+	http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.1.xsd
+	http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.1.xsd">
+ 
+	<!-- This will automatically locate any and all property files you have 
+		within your classpath, provided they fall under the META-INF/spring directory. 
+		The located property files are parsed and their values can then be used within 
+		application context files in the form of ${propertyKey}. <context:property-placeholder 
+		location="classpath*:META-INF/spring/*.properties"/> -->
+
+	<!-- TW this loads machine-specific config settings from an external file (Uncomment)-->
+	<context:property-placeholder properties-ref="propertyConfigurer" location="file:c:/config/config.properties"  ignore-unresolvable="false"/> 
+	<!-- <context:property-placeholder properties-ref="propertyConfigurer" location="file:c:/config/HampshireWebConfig/config.properties"  ignore-unresolvable="false"/>--> 
+
+	<util:properties id="propertyConfigurer" location="classpath:META-INF/config/systemConfigHelp.properties"/>
+    <util:properties id="systemConfig" location="classpath:META-INF/config/systemConfig.properties"/>
+
+	<!-- Turn on AspectJ @Configurable support. As a result, any time you instantiate 
+		an object, Spring will attempt to perform dependency injection on that object. 
+		This occurs for instantiation via the "new" keyword, as well as via reflection. 
+		This is possible because AspectJ is used to "weave" Roo-based applications 
+		at compile time. In effect this feature allows dependency injection of any 
+		object at all in your system, which is a very useful feature (without @Configurable 
+		you'd only be able to dependency inject objects acquired from Spring or subsequently 
+		presented to a specific Spring dependency injection method). Roo applications 
+		use this useful feature in a number of areas, such as @PersistenceContext 
+		injection into entities. -->
+
+	<context:spring-configured />
+
+	<!-- This declaration will cause Spring to locate every @Component, @Repository 
+		and @Service in your application. In practical terms this allows you to write 
+		a POJO and then simply annotate the new POJO as an @Service and Spring will 
+		automatically detect, instantiate and dependency inject your service at startup 
+		time. Importantly, you can then also have your new service injected into 
+		any other class that requires it simply by declaring a field for your service 
+		inside the relying class and Spring will inject it. Note that two exclude 
+		filters are declared. The first ensures that Spring doesn't spend time introspecting 
+		Roo-specific ITD aspects. The second ensures Roo doesn't instantiate your 
+		@Controller classes, as these should be instantiated by a web tier application 
+		context. Refer to web.xml for more details about the web tier application 
+		context setup services. Furthermore, this turns on @Autowired, @PostConstruct 
+		etc support. These annotations allow you to use common Spring and Java Enterprise 
+		Edition annotations in your classes without needing to do any special configuration. 
+		The most commonly used annotation is @Autowired, which instructs Spring to 
+		dependency inject an object into your class. -->
+
+	<context:component-scan base-package="com">
+		<context:exclude-filter expression="org.springframework.stereotype.Controller" type="annotation" />
+	</context:component-scan>
+
+
+	
+	<!--  
+
+	<bean id="SolrSmartSuggester" class="com.sa.assist.search.SolrSmartSuggester">
+		<property name="maxResults" value="10" />
+		<property name="snippetSize" value="100" />
+	</bean>
+
+	<bean id="MainSolrIndex" class="com.sa.assist.search.SolrConfig">
+		<property name="solrURL" value="${solr.index.serverUrl}" />
+		<property name="solrCore" value="${solr.index.serverCore}" />
+	</bean>
+
+	<bean id="IndexManager" class="com.pcg.search.index.IndexManager" />
+-->
+	<!-- Mongo DAO config -->
+    <mongo:mongo-client id="mongo" host="${mongo.host}" port="27017" credentials="${mongo.user}:${mongo.password}@${mongo.db}">
+    </mongo:mongo-client>
+
+    <!-- MongoTemplate for connecting and quering the documents in the database -->  
+    <bean id="mongoTemplate" class="org.springframework.data.mongodb.core.MongoTemplate">
+        <constructor-arg ref="mongo"/>
+        <constructor-arg name="databaseName" value="${mongo.db}"/>          
+     </bean>  
+	<!-- 
+	<bean id="mongoCredentials" class="org.springframework.data.authentication.UserCredentials">
+		<constructor-arg name="username" value="${mongo.user}" />
+		<constructor-arg name="password" value="${mongo.password}" />
+	</bean>
+
+	<mongo:mongo id="mongo" replica-set="${mongo.replicaset}"
+		port="${mongo.port}" write-concern="JOURNAL_SAFE" />
+	<bean id="mongoTemplate" class="org.springframework.data.mongodb.core.MongoTemplate">
+		<constructor-arg ref="mongo" />
+		<constructor-arg name="databaseName" value="${mongo.db}" />
+		<constructor-arg name="userCredentials" ref="mongoCredentials" />
+	</bean>
+	-->
+	
+	<!-- Separate connection definition for the address data -->
+    <mongo:mongo-client id="mongoAddress" replica-set="${mongo.address.replicaset}" port="27017" credentials="${mongo.address.user}:${mongo.address.password}@${mongo.address.db}">
+    </mongo:mongo-client>
+
+    <!-- MongoTemplate for connecting and quering the documents in the database -->  
+    <bean id="mongoTemplateAddress" class="org.springframework.data.mongodb.core.MongoTemplate">
+        <constructor-arg ref="mongoAddress"/>
+        <constructor-arg name="databaseName" value="${mongo.address.db}"/>          
+     </bean>  
+	
+	<!-- 
+	<bean id="mongoAddressCredentials" class="org.springframework.data.authentication.UserCredentials">
+		<constructor-arg name="username" value="${mongo.address.user}" />
+		<constructor-arg name="password" value="${mongo.address.password}" />
+	</bean>
+
+	<mongo:mongo id="mongoAddress" replica-set="${mongo.address.replicaset}"
+		port="${mongo.address.port}" write-concern="NORMAL" />
+	<bean id="mongoTemplateAddress" class="org.springframework.data.mongodb.core.MongoTemplate">
+		<constructor-arg ref="mongoAddress" />
+		<constructor-arg name="databaseName" value="${mongo.address.db}" />
+		<constructor-arg name="userCredentials" ref="mongoAddressCredentials" />
+	</bean>
+ 	-->
+
+	<mongo:repositories base-package="com.pcg.db.mongo.dao" />
+
+	<!-- <bean id="sequenceDAO" class="com.pcg.db.mongo.dao.impl.SequenceDAOImpl" />  -->
+	<!-- <bean id="MongoUIDaoServiceDAO" class="com.sa.assist.service.MongoUIDaoService" /> -->
+
+
+	<!-- Periodically call a class which will perform any scheduled jobs
+	<bean class="org.springframework.scheduling.timer.TimerFactoryBean">
+		<property name="scheduledTimerTasks">
+			<list>
+				<bean id="approvalReminderTask" class="org.springframework.scheduling.timer.ScheduledTimerTask">
+					<property name="delay" value="10000" />
+					<property name="period" value="60000" />
+					<property name="timerTask">
+						<bean class="org.springframework.scheduling.timer.MethodInvokingTimerTaskFactoryBean">
+							<property name="targetObject">
+								<bean id="scheduledTaskService" class="com.sa.assist.service.ScheduledTaskService" />
+							</property>
+							<property name="targetMethod" value="doPendingJobs" />
+						</bean>
+					</property>
+				</bean>	
+			</list>
+		</property>
+	</bean>
+ 	-->
+ 	
+ 	<bean id="solrQueryUtils" class="com.pcg.search.utils.SolrQueryUtils">
+		<property name="queryParameters" ref="queryParameters" />
+		
+	</bean>
+ 	
+ 	
+ 	<bean id="queryParameters" class="com.pcg.search.utils.QueryParameters">
+		
+		<property name="qParams">
+			<map value-type="java.util.List">
+				<entry key="cp"> <!-- Care Provided -->
+					<list>
+						<value>de</value><!-- Dementia -->
+						<value>mhc</value><!-- Mental Health Conditions-->
+						<value>ld</value><!-- Learning Disabilities -->
+						<value>oa</value><!-- Old Age -->
+						<value>pd</value><!-- Physical Disabilities -->
+						<value>si</value><!-- Sensory Impairments -->
+						<value>ppa</value><!-- Past or present alcohol dependence  -->
+						<value>ppd</value><!-- Past or present drug dependence  -->
+			
+					</list>
+				</entry>
+				<entry key="ad"><!-- Admissions -->
+					<list>
+						<value>ss</value><!-- short stay -->
+						<value>fd</value><!-- formal daycare-->
+						<value>ifd</value><!-- informal day care  -->
+						<value>ls</value><!-- long stay  -->
+						
+					</list>
+				</entry>
+				<entry key="tc"><!-- Type of care home -->
+					<list>
+						<value>chwtn</value><!-- Care Home without nursing -->
+						<value>chwn</value><!-- Care Home with nursing -->
+						<value>chb</value><!-- Care Home offering both types of care -->
+						
+						
+					</list>
+				</entry>
+			</map>
+		</property>
+		
+		<property name="query">
+			<map value-type="java.util.List">
+				
+
+			
+				
+				<entry key="generalSearch">
+					<list>
+						<value>q</value>
+						<value>*:*</value>
+						<value>id, name, website, address, town, publicEmail, full_postcode, postcode1, postcode2, location, phone, careProvided, admissions, homeType, dateOfIndex</value>
+						<value>careProvided</value>
+						<value>admissions</value>
+						<!-- Could have values with nursing (wn), without nursing (wtn), both  -->
+						<value>homeType</value>
+			
+					</list>
+				</entry>
+				
+				<entry key="nameSearch">
+					<list>
+						<value>q</value>
+						<value>name:(</value>
+						<value>)</value>
+						<value>id, name, website, address, town, publicEmail, full_postcode, postcode1, postcode2, location, phone, careProvided, admissions, homeType, dateOfIndex</value>
+						<value>town</value>
+									
+					</list>
+				</entry>
+				
+				<entry key="townPcSearch">
+					<list>
+						<value>q</value>
+						<value>*:*</value>
+						<value>fq</value>
+						<value>{!geofilt}</value>
+						<value>sfield</value>
+						<value>location</value>
+						<value>score</value>
+						<value>pt</value>
+						<value>d</value>
+						<value>sort</value>
+						<value>geodist() asc</value>
+						<value>id, name, website, address, town, publicEmail, full_postcode, postcode1, postcode2, location, phone, careProvided, admissions, homeType, dateOfIndex</value>
+						<value>miles</value>	
+						<value>careProvided</value>
+						<value>admissions</value>
+						<value>homeType</value>		
+						<value>fl</value>
+						<value>town</value>	<!-- Town field -->			 							
+					</list>
+				</entry>
+				
+				
+			</map>
+		</property>
+		
+		<property name="solrQueryUrl">
+			<value>http://localhost:8983/solr/live</value>
+		</property>
+		
+		<property name="solrSmartSuggestUrl">
+			<value>http://localhost:8983/solr/event</value>
+		</property>
+		
+		<property name="coordinates">
+			<map>
+				<entry key="Aldershot" value="51.248309387437500,-0.754163387051693" />
+		<entry key="Alton" value="51.1503400155087,-0.973506225018714" />
+		<entry key="Alverstoke" value="50.7879,-1.14542" />
+		<entry key="Andover" value="51.2121323394758,-1.486719384314530" />
+		<entry key="Ashurst" value="50.8948,-1.51669" />
+		<entry key="Barton on Sea" value="50.7428,-1.6552" />
+		<entry key="Basingstoke" value="51.26434108002,-1.0971107774426" />
+		<entry key="Bishops Waltham" value="50.9548,-1.21202" />
+		<entry key="Bordon" value="50.9548,-1.21202" />
+		<entry key="Brockenhurst" value="50.8186,-1.57201" />
+		<entry key="Camberley" value="51.3362,-0.73423" />
+		<entry key="Chandlers Ford" value="50.9822,-1.39544" />
+		<entry key="Eastleigh" value="50.978800685877400,-1.369179503620540" />
+		<entry key="Emsworth" value="50.8539,-0.93757" />
+		<entry key="Fareham" value="50.852216395640500,-1.194567656306060" />
+		<entry key="Farnborough" value="51.293244353760300,-0.761041340320648" />
+		<entry key="Farnham" value="51.2167,-0.8" />
+		<entry key="Fleet" value="51.276798808219400,-0.838243268831135" />
+		<entry key="Fordingbridge" value="50.927,-1.79114" />
+		<entry key="Gosport" value="50.805058790091800,-1.152610232381370" />
+		<entry key="Havant" value="50.860051842900000,-0.984944306976026" />
+		<entry key="Hayling Island" value="50.8318,-0.97756" />
+		<entry key="Hedge End" value="50.9158,-1.29253" />
+		<entry key="Horndean" value="50.9076,-1.00607" />
+		<entry key="Hythe" value="50.9076,-1.00607" />
+		<entry key="Lee on Solent" value="50.8007,-1.20247" />
+		<entry key="Liphook" value="51.0776,-0.7992" />
+		<entry key="Liss" value="51.0431,-0.89272" />
+		<entry key="Locks Heath" value="50.8669,-1.27693" />
+		<entry key="Lymington" value="50.759,-1.53888" />
+		<entry key="Lyndhurst" value="50.872970979650700,-1.575009414311390" />
+		<entry key="Milford on Sea" value="50.7251,-1.59223" />
+		<entry key="Netley Abbey" value="50.8751,-1.35498" />
+		<entry key="New Milton" value="50.758,-1.67131" />
+		<entry key="Petersfield" value="51.005085302478400,-0.933761634259557" />
+		<entry key="Portsmouth: Central" value="50.819917602342800,-1.077728399116350" />
+		<entry key="Portsmouth: Cosham" value="50.8423,-1.0673" />
+		<entry key="Portsmouth: Southsea" value="50.7851,-1.08401" />
+		<entry key="Ringwood" value="50.8465,-1.79342" />
+		<entry key="Romsey" value="50.993271092693200,-1.483069180900960" />
+		<entry key="Southampton: Bassett" value="50.9406,-1.4089" />
+		<entry key="Southampton: Bitterne" value="50.9143,-1.359" />
+		<entry key="Southampton: Central" value="50.918864264306200,-1.397892608504510" />
+		<entry key="Southampton: Portswood" value="50.9333,-1.38333" />
+		<entry key="Southampton: Shirley" value="50.9167,-1.41667" />
+		<entry key="Southampton: Woolston" value="50.8972,-1.3805" />
+		<entry key="Stockbridge" value="51.1146,-1.49727" />
+		<entry key="Totton" value="50.9199,-1.49117" />
+		<entry key="Waterlooville" value="50.8836,-1.03823" />
+		<entry key="West End" value="50.9273,-1.32949" />
+		<entry key="Wickham" value="50.8998,-1.18911" />
+		<entry key="Winchester" value="51.062307322902000,-1.315103145469070" />
+			
+			</map>
+		</property>
+	</bean>
+ 	
+ 	<!-- 
+ 	<bean id="documentationController" class="org.jsondoc.springmvc.controller.JSONDocController">
+		<constructor-arg name="version" value="1.0" />
+		<constructor-arg name="basePath" value="http://localhost:8080/search/api" />
+		<constructor-arg name="packages">
+		  <list>
+			
+			<value>com.pcg.search.api.beans</value> 
+			
+		 	<value>com.pcg.search.api.controllers</value>
+		  </list>
+		</constructor-arg>
+		<property name="playgroundEnabled" value="true" /> 
+		<property name="displayMethodAs" value="URI" /> 
+	</bean>
+	 -->
+ 	
+</beans>
